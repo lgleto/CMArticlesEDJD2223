@@ -10,31 +10,59 @@ import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.io.IOException
 import java.util.*
+
 
 class MainActivity : AppCompatActivity() {
 
     // model
     var articles = arrayListOf<Article>()
 
+    val adapter = ArticleAdapter()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        articles.add(Article("Cotrim de Figueiredo: mudanças no IRS são “uma cócega no enorme sufoco das famílias", Date(),"Use as ferramentas de partilha que encontra na página de artigo.\n" +
-                "Todos os conteúdos do PÚBLICO são protegidos por Direitos de Autor ao abrigo da legislação portuguesa, conforme os Termos e Condições.Os assinantes do jornal PÚBLICO têm direito a oferecer até 6 artigos exclusivos por mês a amigos ou familiares, usando a opção “Oferecer artigo” no topo da página. Apoie o jornalismo de qualidade do PÚBLICO.\n" +
-                "https://www.publico.pt/2022/10/13/politica/entrevista/cotrim-figueiredo-mudancas-irs-sao-cocega-enorme-sufoco-familias-2023778\n" +
-                "\n" +
-                "A IL já considerou que este é um mau orçamento. Diz que há um optimismo excessivo nas previsões económicas e que os portugueses vão continuar a perder poder de compra. O que é que faria de diferente se tivesse de fazer um orçamento?\n" +
-                "Este orçamento foi uma enorme decepção. E não é só por uma questão de optimismo ou falta dele. É um orçamento que demonstra um enorme enfoque na dívida pública e não responde àquilo que eu chamo “uma dúvida pública”, que é porque é que Portugal não cresce tanto como outros países que estão no nosso campeonato.",null))
-        articles.add(Article("PPP na alta velocidade: privados vão construir e manter linha a troco de rendas", Date(),"Use as ferramentas de partilha que encontra na página de artigo.\n" +
-                "Todos os conteúdos do PÚBLICO são protegidos por Direitos de Autor ao abrigo da legislação portuguesa, conforme os Termos e Condições.Os assinantes do jornal PÚBLICO têm direito a oferecer até 6 artigos exclusivos por mês a amigos ou familiares, usando a opção “Oferecer artigo” no topo da página. Apoie o jornalismo de qualidade do PÚBLICO.\n" +
-                "https://www.publico.pt/2022/10/13/economia/noticia/ppp-alta-velocidade-privados-vao-construir-manter-linha-troco-rendas-2023664\n" +
-                "\n" +
-                "Vice-presidente da IP, Carlos Fernandes, confirma que a construção e manutenção da linha entre o Porto e Soure estará a cargo de um consórcio privado que será remunerado pela capacidade da infra-estrutura.",null))
-
         val listViewArticles = findViewById<ListView>(R.id.listViewArticles)
-        listViewArticles.adapter = ArticleAdapter()
+        listViewArticles.adapter = adapter
+
+        lifecycleScope.launch (Dispatchers.IO){
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url("https://newsapi.org/v2/top-headlines?country=pt&apiKey=1765f87e4ebc40229e80fd0f75b6416c")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Unexpected code $response")
+
+                val result = response.body!!.string()
+
+                val jsonObject = JSONObject(result)
+                val jsonObjectStatus = jsonObject.getString("status")
+                if (jsonObjectStatus == "ok"){
+                    val jsonArrayArticles = jsonObject.getJSONArray("articles")
+                    for( index in 0 until  jsonArrayArticles.length()){
+                        val jsonObjectArticle = jsonArrayArticles.getJSONObject(index)
+                        val article = Article.fromJSON(jsonObjectArticle)
+                        articles.add(article)
+                    }
+                    lifecycleScope.launch (Dispatchers.Main){
+                        adapter.notifyDataSetChanged()
+                    }
+
+                }
+
+            }
+        }
 
 
     }
@@ -61,14 +89,14 @@ class MainActivity : AppCompatActivity() {
             val imageViewArticleImage = rootView.findViewById<ImageView>(R.id.imageViewArticleImage)
 
             textViewArticleTitle.text = articles[position].title
-            textViewArticleBody.text = articles[position].body
-            textViewArticleDate.text = articles[position].pubDate.toString()
+            textViewArticleBody.text = articles[position].content
+            textViewArticleDate.text = articles[position].publishedAt.toString()
 
             rootView.setOnClickListener {
                 Log.d("MainActivity", articles[position].title?:"" )
                 val intent = Intent(this@MainActivity, ArticleDetailActivity::class.java)
                 intent.putExtra("title", articles[position].title)
-                intent.putExtra("body", articles[position].body)
+                intent.putExtra("body", articles[position].content)
                 startActivity(intent)
 
             }
