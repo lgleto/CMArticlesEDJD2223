@@ -35,35 +35,10 @@ class MainActivity : AppCompatActivity() {
         val listViewArticles = findViewById<ListView>(R.id.listViewArticles)
         listViewArticles.adapter = adapter
 
-        lifecycleScope.launch (Dispatchers.IO){
-            val client = OkHttpClient()
-            val request = Request.Builder()
-                .url("https://newsapi.org/v2/top-headlines?country=pt&apiKey=1765f87e4ebc40229e80fd0f75b6416c")
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
-
-                val result = response.body!!.string()
-
-                val jsonObject = JSONObject(result)
-                val jsonObjectStatus = jsonObject.getString("status")
-                if (jsonObjectStatus == "ok"){
-                    val jsonArrayArticles = jsonObject.getJSONArray("articles")
-                    for( index in 0 until  jsonArrayArticles.length()){
-                        val jsonObjectArticle = jsonArrayArticles.getJSONObject(index)
-                        val article = Article.fromJSON(jsonObjectArticle)
-                        articles.add(article)
-                    }
-                    lifecycleScope.launch (Dispatchers.Main){
-                        adapter.notifyDataSetChanged()
-                    }
-
-                }
-
-            }
+        Backend.fetchLatestArticles(lifecycleScope, "pt"){
+            articles = it
+            adapter.notifyDataSetChanged()
         }
-
 
     }
 
@@ -90,13 +65,22 @@ class MainActivity : AppCompatActivity() {
 
             textViewArticleTitle.text = articles[position].title
             textViewArticleBody.text = articles[position].content
-            textViewArticleDate.text = articles[position].publishedAt.toString()
+            textViewArticleDate.text = articles[position].publishedAt?.toHourDateString()
+
+            articles[position].urlToImage?.let {
+                Backend.fetchImage(lifecycleScope, it){ bitmap ->
+                    imageViewArticleImage.setImageBitmap(bitmap)
+                }
+            }
 
             rootView.setOnClickListener {
                 Log.d("MainActivity", articles[position].title?:"" )
-                val intent = Intent(this@MainActivity, ArticleDetailActivity::class.java)
-                intent.putExtra("title", articles[position].title)
-                intent.putExtra("body", articles[position].content)
+                //val intent = Intent(this@MainActivity, ArticleDetailActivity::class.java)
+                //intent.putExtra("title", articles[position].title)
+                //intent.putExtra("body", articles[position].content)
+
+                val intent = Intent(this@MainActivity, ArticleWebDetailActivity::class.java)
+                intent.putExtra(EXTRA_ARTICLE_STRING, articles[position].toJSON().toString() )
                 startActivity(intent)
 
             }
@@ -104,6 +88,10 @@ class MainActivity : AppCompatActivity() {
 
             return rootView
         }
+    }
+
+    companion object {
+        const val EXTRA_ARTICLE_STRING = "article_string"
     }
 
 }

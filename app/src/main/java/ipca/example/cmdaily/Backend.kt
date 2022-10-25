@@ -1,6 +1,8 @@
 package ipca.example.cmdaily
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -11,12 +13,14 @@ import org.json.JSONObject
 import java.io.IOException
 
 object Backend {
-    /*
-    fun fetchLatestArticles (scope: CoroutineScope, country : String ) {
+
+    val client = OkHttpClient()
+
+    fun fetchLatestArticles (scope: CoroutineScope, country : String, callback: (ArrayList<Article>)->Unit )  {
         scope.launch (Dispatchers.IO){
-            val client = OkHttpClient()
+
             val request = Request.Builder()
-                .url("https://newsapi.org/v2/top-headlines?country=pt&apiKey=1765f87e4ebc40229e80fd0f75b6416c")
+                .url("https://newsapi.org/v2/top-headlines?country=$country&apiKey=1765f87e4ebc40229e80fd0f75b6416c")
                 .build()
 
             client.newCall(request).execute().use { response ->
@@ -35,13 +39,26 @@ object Backend {
                         articles.add(article)
                     }
                     scope.launch (Dispatchers.Main){
-                        return articles
+                        callback(articles)
                     }
-
                 }
-
             }
         }
-    }*/
+    }
+
+    fun fetchImage(scope: CoroutineScope, url:String, callback:(Bitmap)->Unit) {
+        scope.launch (Dispatchers.IO){
+            val request = Request.Builder()
+                .url(url)
+                .build()
+            client.newCall(request).execute().use { response ->
+                val inputStream = response.body?.byteStream()
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                scope.launch (Dispatchers.Main){
+                    callback(bitmap)
+                }
+            }
+        }
+    }
 
 }
