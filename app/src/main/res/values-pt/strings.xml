@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CMDaily</string>
+    <string name="title_home">Principal</string>
+    <string name="news">Notícias</string>
+    <string name="sports">Desporto</string>
+    <string name="technology">Tecnologia</string>
+    <string name="country">pt</string>
+</resources>

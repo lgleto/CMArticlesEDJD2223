@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">CMDaily</string>
+    <string name="title_home">Home</string>
+    <string name="news">News</string>
+    <string name="sports">Sports</string>
+    <string name="technology">Technology</string>
+    <string name="country">us</string>
+</resources>
